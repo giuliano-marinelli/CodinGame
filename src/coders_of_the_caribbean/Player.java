@@ -14,9 +14,12 @@ class Player {
     private static ArrayList<Barrel> barrels = new ArrayList<>();
     private static ArrayList<Mine> mines = new ArrayList<>();
     private static ArrayList<Cannonball> cannonballs = new ArrayList<>();
-    private static Barrel barrelTarget = null;
+    private static Barrel barrelTargetMax = null;
+    private static Barrel barrelTargetMin = null;
     private static float barrelHeuristicActual = 0;
     private static float barrelHeuristicMax = 0;
+    private static float barrelHeuristicMin = 0;
+    private static Random random = new Random();
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
@@ -54,10 +57,14 @@ class Player {
                     cannonballs.add(new Cannonball(entityId, x, y, arg1, arg2));
                 }
             }
-            
+
+            ArrayList<Ship> enemyTargets = new ArrayList<>();
+
             for (int i = 0; i < myShipCount; i++) {
-                barrelTarget = null;
+                barrelTargetMax = null;
+                barrelTargetMin = null;
                 barrelHeuristicMax = 0;
+                barrelHeuristicMin = Integer.MAX_VALUE;
                 int barrelDistance = 0;
                 int barrelRum = 0;
                 for (Barrel barrel : barrels) {
@@ -69,8 +76,13 @@ class Player {
                     barrelRum = barrel.getRum();
                     barrelHeuristicActual = barrelRum / barrelDistance;
                     if (barrelHeuristicMax < barrelHeuristicActual) {
-                        barrelTarget = barrel;
+                        barrelTargetMax = barrel;
                         barrelHeuristicMax = barrelHeuristicActual;
+                    }
+                    barrelHeuristicActual = barrelDistance / barrelRum;
+                    if (barrelHeuristicMin > barrelHeuristicActual) {
+                        barrelTargetMin = barrel;
+                        barrelHeuristicMin = barrelHeuristicActual;
                     }
                 }
 
@@ -85,99 +97,170 @@ class Player {
                     }
                 }
 
-                if (barrelTarget != null && ((barrelTarget.getRum() <= (100 - allyShips.get(i).getRum()) && distanceToEnemy > 7)
+                if (barrelTargetMax != null && ((barrelTargetMax.getRum() <= (100 - allyShips.get(i).getRum()) && distanceToEnemy > 10)
                         || allyShips.get(i).getSpeed() == 0)) {
+
                     //PARA MOVERSE DE A UNA CASILLA
-                    /*Hex hexForward = hexOffsetNeighbor(allyShips.get(i).getPosition(), allyShips.get(i).getOrientation());
-                    Hex hexStraight = hexOffsetNeighbor(hexForward, allyShips.get(i).getOrientation());
-                    int distanceStraight = hexDistance(
-                            hexStraight,
-                            barrelTarget.getPosition());
-                    Hex hexTurnLeft = hexOffsetNeighbor(hexForward, allyShips.get(i).getLeftDirection());
-                    int distanceTurnLeft = hexDistance(
-                            hexTurnLeft,
-                            barrelTarget.getPosition());
-                    Hex hexTurnRight = hexOffsetNeighbor(hexForward, allyShips.get(i).getRightDirection());
-                    int distanceTurnRight = hexDistance(
-                            hexTurnRight,
-                            barrelTarget.getPosition());
-                    if (!hexCollideMine(hexStraight) && !hexCollideEnemyShip(hexStraight) && distanceStraight < distanceTurnLeft && distanceStraight < distanceTurnRight) {
-                        if (allyShips.get(i).getSpeed() > 0) {
-                            System.out.println("WAIT");
-                        } else {
-                            System.out.println("MOVE " + hexStraight.getX() + " " + hexStraight.getY());
-                        }
-                    } else if (!hexCollideMine(hexTurnLeft) && !hexCollideEnemyShip(hexTurnLeft) && distanceTurnLeft <= distanceStraight && distanceTurnLeft <= distanceTurnRight) {
-                        System.out.println("MOVE " + hexTurnLeft.getX() + " " + hexTurnLeft.getY());
-                    } else if (!hexCollideMine(hexTurnRight) && !hexCollideEnemyShip(hexTurnRight) && distanceTurnRight <= distanceStraight && distanceTurnRight <= distanceTurnLeft) {
-                        System.out.println("MOVE " + hexTurnRight.getX() + " " + hexTurnRight.getY());
-                    }*/
+                    moveToTarget(i, barrelTargetMax.getPosition());
 
                     //MOVERSE DE FORMA CLASICA
-                    System.out.println("MOVE " + barrelTarget.getPosition().getX() + " " + barrelTarget.getPosition().getY());
-
-                    //System.err.println("[Ship] = (" + hexForward.getX() + "," + hexForward.getY() + ")");
+                    //System.out.println("MOVE " + barrelTarget.getPosition().getX() + " " + barrelTarget.getPosition().getY());
                     System.err.println("[Barrel Target] = ("
-                            + barrelTarget.getPosition().getX() + ","
-                            + barrelTarget.getPosition().getY() + ")");
+                            + barrelTargetMax.getPosition().getX() + ","
+                            + barrelTargetMax.getPosition().getY() + ")");
                     System.err.println("Heuristic [Barrel Target] = " + barrelHeuristicMax);
-                    //System.err.println("Distance [Ship] -> [Barrel Target] = "
-                    //        + hexDistance(hexForward, barrelTarget.getPosition()));
-                    //System.err.println("[HexS] = (" + hexStraight.getX() + "," + hexStraight.getY() + ")");
-                    //System.err.println("[HexTL] = (" + hexTurnLeft.getX() + "," + hexTurnLeft.getY() + ")");
-                    //System.err.println("[HexTR] = (" + hexTurnRight.getX() + "," + hexTurnRight.getY() + ")");
-                    //System.err.println("Distance [Straight|Left|Right]: "
-                    //        + distanceStraight + ", " + distanceTurnLeft + ", " + distanceTurnRight);
+
                 } else if (enemyTarget != null) {
-                    //if (allyShips.get(i).getRum() < enemyShips.get(i).getRum()) {
-                    if (distanceToEnemy > 5 || allyShips.get(i).getSpeed() == 0) {
-                        System.out.println("MOVE " + enemyTarget.getPosition().getX() + " " + enemyTarget.getPosition().getY());
-                    } else if (distanceToEnemy <= 5) {
+                    Hex hexForward = hexOffsetNeighbor(allyShips.get(i).getPosition(), allyShips.get(i).getOrientation());
+                    Hex hexStraightTop = hexOffsetNeighbor(hexForward, allyShips.get(i).getOrientation());
+                    if (distanceToEnemy > 7 || allyShips.get(i).getSpeed() < 1
+                            || (hexStraightTop != null && hexCollideMine(hexStraightTop))) {
+                        if (barrelTargetMax != null) {
+                            moveToTarget(i, barrelTargetMax.getPosition());
+                        } else {
+                            moveToTarget(i, enemyTarget.getPosition());
+                        }
+                        //System.out.println("MOVE " + enemyTarget.getPosition().getX() + " " + enemyTarget.getPosition().getY());
+                    } else if (distanceToEnemy <= 7) {
+                        int attackDirection = enemyTarget.getOrientation();
+                        if (i > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
+                            attackDirection =  enemyTarget.getLeftDirection();
+                        }
                         Hex futureEnemyHex = enemyTarget.getPosition();
-                        for (int j = 0; j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed(); j++) {
-                            futureEnemyHex = hexOffsetNeighbor(futureEnemyHex, enemyTarget.getOrientation());
+                        int j = 0;
+                        while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !hexBorderOfMap(futureEnemyHex)) {
+                            /*int randomDirection;
+                            switch (random.nextInt(3)) {
+                                case 0:
+                                    randomDirection = enemyTarget.getOrientation();
+                                    break;
+                                case 1:
+                                    randomDirection = enemyTarget.getLeftDirection();
+                                    break;
+                                case 2:
+                                    randomDirection = enemyTarget.getRightDirection();
+                                    break;
+                                default:
+                                    randomDirection = enemyTarget.getOrientation();
+                                    break;
+                            }*/
+                            futureEnemyHex = hexOffsetNeighbor(futureEnemyHex, attackDirection);
+                            j++;
                         }
                         System.out.println("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
                     }
-                    //} else {
-
-                    //}
+                    /*else if (distanceToEnemy >= 10) {
+                        System.out.println("MINE");
+                    }*/
                     System.err.println("Distance [EnemyShip] = " + distanceToEnemy);
 
                     //MOVIMIENTO ALEATORIO
-                    //Random random = new Random();
                     //System.out.println("MOVE " + random.nextInt(22) + " " + random.nextInt(20));
+                    enemyTargets.add(enemyTarget);
                 }
             }
         }
     }
 
-    //OLD
-    /*private static int[] oddrOffsetNeighbor(int[] hex, int direction) {
-        //devuelve la coordenada de el hexagono vecino en la direccion indicada
-        int par = hex[1] % 2;
-        int[] dir = oddrDirections[par][direction];
-        return new int[]{hex[0] + dir[0], hex[1] + dir[1]};
+    private static void moveToTarget(int shipId, Hex target) {
+        Hex hexForward = hexOffsetNeighbor(allyShips.get(shipId).getPosition(), allyShips.get(shipId).getOrientation());
+
+        Hex hexLeftTop = hexOffsetNeighbor(allyShips.get(shipId).getPosition(), allyShips.get(shipId).getLeftDirection());
+        Hex hexLeftMid = null;
+        Hex hexLeftBot = null;
+        if (!hexBorderOfMap(hexLeftTop)) {
+            hexLeftMid = hexOffsetNeighbor(hexLeftTop, getOppositeDirection(allyShips.get(shipId).getLeftDirection()));
+            hexLeftBot = hexOffsetNeighbor(hexLeftMid, getOppositeDirection(allyShips.get(shipId).getLeftDirection()));
+        }
+
+        Hex hexRightTop = hexOffsetNeighbor(allyShips.get(shipId).getPosition(), allyShips.get(shipId).getRightDirection());
+        Hex hexRightMid = null;
+        Hex hexRightBot = null;
+        if (!hexBorderOfMap(hexRightTop)) {
+            hexRightMid = hexOffsetNeighbor(hexRightTop, getOppositeDirection(allyShips.get(shipId).getRightDirection()));
+            hexRightBot = hexOffsetNeighbor(hexRightMid, getOppositeDirection(allyShips.get(shipId).getRightDirection()));
+        }
+
+        Hex hexStraightTop = hexOffsetNeighbor(hexForward, allyShips.get(shipId).getOrientation());
+        //Hex hexStraightMid = hexOffsetNeighbor(hexStraightTop, getOppositeDirection(allyShips.get(shipId).getOrientation()));
+        //Hex hexStraightBot = hexOffsetNeighbor(hexStraightMid, getOppositeDirection(allyShips.get(shipId).getOrientation()));
+
+        Hex hexTurnLeftTop = hexOffsetNeighbor(hexForward, allyShips.get(shipId).getLeftDirection());
+        Hex hexTurnLeftMid = null;
+        Hex hexTurnLeftBot = null;
+        if (!hexBorderOfMap(hexTurnLeftTop)) {
+            hexTurnLeftMid = hexOffsetNeighbor(hexTurnLeftTop, getOppositeDirection(allyShips.get(shipId).getLeftDirection()));
+            hexTurnLeftBot = hexOffsetNeighbor(hexTurnLeftMid, getOppositeDirection(allyShips.get(shipId).getLeftDirection()));
+        }
+
+        Hex hexTurnRightTop = hexOffsetNeighbor(hexForward, allyShips.get(shipId).getRightDirection());
+        Hex hexTurnRightMid = null;
+        Hex hexTurnRightBot = null;
+        if (!hexBorderOfMap(hexTurnRightTop)) {
+            hexTurnRightMid = hexOffsetNeighbor(hexTurnRightTop, getOppositeDirection(allyShips.get(shipId).getRightDirection()));
+            hexTurnRightBot = hexOffsetNeighbor(hexTurnRightMid, getOppositeDirection(allyShips.get(shipId).getRightDirection()));
+        }
+
+        int distanceStraight = hexDistance(hexStraightTop, target);
+        int distanceTurnLeft = hexDistance(hexTurnLeftTop, target);
+        int distanceTurnRight = hexDistance(hexTurnRightTop, target);
+
+        if (allyShips.get(shipId).getSpeed() < 1) {
+            if (!hexOutOfMap(hexStraightTop)
+                    && !hexCollideMine(hexStraightTop) //&& !hexCollideMine(hexStraightMid) && !hexCollideMine(hexStraightBot)
+                    && !hexCollideEnemyShip(hexStraightTop)) {
+                System.out.println("FASTER");
+                //System.err.println("[Hex Straight] = (" + hexStraightTop.getX() + "," + hexStraightTop.getY() + ")");
+            } else if (!hexOutOfMap(hexLeftTop) && hexLeftMid != null && hexLeftBot != null
+                    && !hexCollideMine(hexLeftTop) && !hexCollideMine(hexLeftMid) && !hexCollideMine(hexLeftBot)
+                    && !hexCollideEnemyShip(hexLeftTop) && distanceTurnLeft <= distanceTurnRight) {
+                System.out.println("PORT");
+            } else if (!hexOutOfMap(hexRightTop) && hexRightMid != null && hexRightBot != null
+                    && !hexCollideMine(hexRightTop) && !hexCollideMine(hexRightMid) && !hexCollideMine(hexRightBot)
+                    && !hexCollideEnemyShip(hexRightTop) && distanceTurnRight <= distanceTurnLeft) {
+                System.out.println("STARBOARD");
+            } else if (!hexOutOfMap(hexLeftTop) && hexLeftMid != null && hexLeftBot != null
+                    && !hexCollideMine(hexLeftTop) && !hexCollideMine(hexLeftMid) && !hexCollideMine(hexLeftBot)
+                    && !hexCollideEnemyShip(hexLeftTop)) {
+                System.out.println("PORT");
+            } else {
+                System.out.println("STARBOARD");
+            }
+        } else {
+            if (!hexOutOfMap(hexStraightTop)
+                    && !hexCollideMine(hexStraightTop) //&& !hexCollideMine(hexStraightMid) && !hexCollideMine(hexStraightBot)
+                    && !hexCollideEnemyShip(hexStraightTop) && distanceStraight < distanceTurnLeft && distanceStraight < distanceTurnRight) {
+                //System.out.println("MOVE " + hexStraight.getX() + " " + hexStraight.getY());
+                System.out.println("WAIT");
+            } else if (!hexOutOfMap(hexLeftTop) && hexTurnLeftMid != null && hexTurnLeftBot != null
+                    && !hexCollideMine(hexTurnLeftTop) && !hexCollideMine(hexTurnLeftMid) && !hexCollideMine(hexTurnLeftBot)
+                    && !hexCollideEnemyShip(hexTurnLeftTop) && distanceTurnLeft <= distanceStraight && distanceTurnLeft <= distanceTurnRight) {
+                //System.out.println("MOVE " + hexTurnLeft.getX() + " " + hexTurnLeft.getY());
+                System.out.println("PORT");
+            } else if (!hexOutOfMap(hexRightTop) && hexTurnRightMid != null && hexTurnRightBot != null
+                    && !hexCollideMine(hexTurnRightTop) && !hexCollideMine(hexTurnRightMid) && !hexCollideMine(hexTurnRightBot)
+                    && !hexCollideEnemyShip(hexTurnRightTop) && distanceTurnRight <= distanceStraight && distanceTurnRight <= distanceTurnLeft) {
+                //System.out.println("MOVE " + hexTurnRight.getX() + " " + hexTurnRight.getY());
+                System.out.println("STARBOARD");
+            } else {
+                System.out.println("WAIT");
+            }
+        }
+        /*System.err.println("[Ship] = (" + hexForward.getX() + "," + hexForward.getY() + ")");
+        System.err.println("Distance [Ship] -> [Barrel Target] = "
+                + hexDistance(hexForward, target));
+        System.err.println("[HexS] = (" + hexStraightTop.getX() + "," + hexStraightTop.getY() + ")" + !hexCollideMine(hexStraightTop));
+        System.err.println("[HexTL] = (" + hexTurnLeftTop.getX() + "," + hexTurnLeftTop.getY() + ")" + !hexCollideMine(hexTurnLeftTop));
+        System.err.println("[HexTR] = (" + hexTurnRightTop.getX() + "," + hexTurnRightTop.getY() + ")" + !hexCollideMine(hexTurnRightTop));
+        System.err.println("Distance [Straight|Left|Right]: "
+                + distanceStraight + ", " + distanceTurnLeft + ", " + distanceTurnRight);*/
     }
 
-    private static int[] oddrToCube(int[] hex) {
-        //traduce de hexagono a cubo
-        int[] cube = new int[3];
-        cube[0] = hex[0] - (hex[1] - (hex[1] % 2)) / 2;
-        cube[2] = hex[1];
-        cube[1] = -cube[0] - cube[2];
-        return cube;
-    }
-
-    private static int[] cubeToOddr(int[] cube) {
-        //traduce de cubo a hexagono
-        int[] hex = new int[2];
-        hex[0] = cube[0] + (cube[2] - (cube[2] % 2)) / 2;
-        hex[1] = cube[2];
-        return hex;
-    }*/
     private static Hex hexOffsetNeighbor(Hex hex, int direction) {
         //devuelve la coordenada de el hexagono vecino en la direccion indicada
+        if (hexOutOfMap(hex)) {
+            return hex;
+        }
         int even = hex.getY() % 2;
         int[] dir = hexDirections[even][direction];
         return new Hex(hex.getX() + dir[0], hex.getY() + dir[1]);
@@ -253,6 +336,49 @@ class Player {
         return collide;
     }
 
+    private static boolean hexOutOfMap(Hex hex) {
+        boolean outOfMap = false;
+        if (hex.getX() < 0 || hex.getY() < 0 || hex.getX() > 22 || hex.getY() > 20) {
+            outOfMap = true;
+        }
+        return outOfMap;
+    }
+
+    private static boolean hexBorderOfMap(Hex hex) {
+        boolean outOfMap = false;
+        if (hex.getX() < 1 || hex.getY() < 1 || hex.getX() > 21 || hex.getY() > 19) {
+            outOfMap = true;
+        }
+        return outOfMap;
+    }
+
+    private static int getOppositeDirection(int direction) {
+        int oppositeDirection;
+        switch (direction) {
+            case 0:
+                oppositeDirection = 3;
+                break;
+            case 1:
+                oppositeDirection = 4;
+                break;
+            case 2:
+                oppositeDirection = 5;
+                break;
+            case 3:
+                oppositeDirection = 0;
+                break;
+            case 4:
+                oppositeDirection = 1;
+                break;
+            case 5:
+                oppositeDirection = 2;
+                break;
+            default:
+                oppositeDirection = direction;
+                break;
+        }
+        return oppositeDirection;
+    }
 }
 
 class Ship {
@@ -475,6 +601,11 @@ class Hex {
         this.y = y;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        Hex otherHex = (Hex) obj;
+        return (this.x == otherHex.getX() && this.y == otherHex.getY());
+    }
 }
 
 class Cube {
