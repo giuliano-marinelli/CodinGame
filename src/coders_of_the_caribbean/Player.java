@@ -54,6 +54,7 @@ class Player {
                     cannonballs.add(new Cannonball(entityId, x, y, arg1, arg2));
                 }
             }
+            
             for (int i = 0; i < myShipCount; i++) {
                 barrelTarget = null;
                 barrelHeuristicMax = 0;
@@ -73,10 +74,19 @@ class Player {
                     }
                 }
 
-                int distanceToEnemy = hexDistance(allyShips.get(i).getPosition(), enemyShips.get(i).getPosition());
+                Ship enemyTarget = null;
+                int distanceToEnemy = Integer.MAX_VALUE;
+                int distanceToEnemyActual;
+                for (Ship enemyShip : enemyShips) {
+                    distanceToEnemyActual = hexDistance(allyShips.get(i).getPosition(), enemyShip.getPosition());
+                    if (distanceToEnemyActual < distanceToEnemy) {
+                        distanceToEnemy = distanceToEnemyActual;
+                        enemyTarget = enemyShip;
+                    }
+                }
 
-                if ((barrelTarget != null && barrelTarget.getRum() <= (100 - allyShips.get(i).getRum()) && distanceToEnemy > 7)
-                        || allyShips.get(i).getSpeed() == 0) {
+                if (barrelTarget != null && ((barrelTarget.getRum() <= (100 - allyShips.get(i).getRum()) && distanceToEnemy > 7)
+                        || allyShips.get(i).getSpeed() == 0)) {
                     //PARA MOVERSE DE A UNA CASILLA
                     /*Hex hexForward = hexOffsetNeighbor(allyShips.get(i).getPosition(), allyShips.get(i).getOrientation());
                     Hex hexStraight = hexOffsetNeighbor(hexForward, allyShips.get(i).getOrientation());
@@ -118,14 +128,14 @@ class Player {
                     //System.err.println("[HexTR] = (" + hexTurnRight.getX() + "," + hexTurnRight.getY() + ")");
                     //System.err.println("Distance [Straight|Left|Right]: "
                     //        + distanceStraight + ", " + distanceTurnLeft + ", " + distanceTurnRight);
-                } else {
+                } else if (enemyTarget != null) {
                     //if (allyShips.get(i).getRum() < enemyShips.get(i).getRum()) {
                     if (distanceToEnemy > 5 || allyShips.get(i).getSpeed() == 0) {
-                        System.out.println("MOVE " + enemyShips.get(i).getPosition().getX() + " " + enemyShips.get(i).getPosition().getY());
+                        System.out.println("MOVE " + enemyTarget.getPosition().getX() + " " + enemyTarget.getPosition().getY());
                     } else if (distanceToEnemy <= 5) {
-                        Hex futureEnemyHex = enemyShips.get(i).getPosition();
-                        for (int j = 0; j < (1 + distanceToEnemy / 3) * enemyShips.get(i).getSpeed(); j++) {
-                            futureEnemyHex = hexOffsetNeighbor(futureEnemyHex, enemyShips.get(i).getOrientation());
+                        Hex futureEnemyHex = enemyTarget.getPosition();
+                        for (int j = 0; j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed(); j++) {
+                            futureEnemyHex = hexOffsetNeighbor(futureEnemyHex, enemyTarget.getOrientation());
                         }
                         System.out.println("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
                     }
