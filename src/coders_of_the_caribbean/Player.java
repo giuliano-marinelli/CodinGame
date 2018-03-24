@@ -67,12 +67,12 @@ class Player {
             }
 
             for (int x = -1; x < 23; x++) {
-                obstacles.add(new Hex(x, -1));
-                obstacles.add(new Hex(x, 21));
+                obstacles.add(new Hex(x, -2));
+                obstacles.add(new Hex(x, 22));
             }
             for (int y = -1; y < 21; y++) {
-                obstacles.add(new Hex(-1, y));
-                obstacles.add(new Hex(23, y));
+                obstacles.add(new Hex(-2, y));
+                obstacles.add(new Hex(24, y));
             }
 
             for (int i = 0; i < myShipCount; i++) {
@@ -225,7 +225,7 @@ class Player {
         }
 
         if (neighborShip.collide(barrels)) {
-            value = value + 5;
+            value = value + 2;
         }
 
         if (action == "PORT") {
@@ -244,8 +244,12 @@ class Player {
             }
         }
 
-        if (action == "MINE" && distanceToEnemy > 10 && neighborShip.getSpeed() > 0) {
-            value = value + 5;
+        if (action == "MINE") {
+            if (neighborShip.getSpeed() > 0 && distanceToEnemy > 10) {
+                value = value + 5;
+            } else {
+                value = value - 10;
+            }
         }
 
         if (action == "FASTER") {
@@ -499,7 +503,7 @@ class Ship extends Entity {
 
         return futureShip;
     }
-    
+
 }
 
 class Barrel extends Entity {
