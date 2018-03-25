@@ -309,13 +309,11 @@ class Ship extends Entity {
                 goBarrel(allyShips, enemyShips, barrels, mines);
                 break;
             case 2:
-                goBarrel(allyShips, enemyShips, barrels, mines);
                 System.err.println("[segunda estrategia]");
                 /*toma el rum.*/
                 tomarRum(allyShips, enemyShips, barrels, mines);
                 break;
             case 3:
-                goBarrel(allyShips, enemyShips, barrels, mines);
                 System.err.println("[tercera estrategia]");
                 /*alejarse del enemigo en busca del Rum que maximice el rum/distanciaEnemigo*/
                 alejarseEnemigoBuscarRum(allyShips, enemyShips, barrels, mines);
@@ -328,12 +326,13 @@ class Ship extends Entity {
 
     /**
      * esta funcion de evaluacion debería ser mejor
+     *
      * @param allyShips
      * @param enemyShips
      * @param barrels
      * @param mines
      * @param actions
-     * @return 
+     * @return
      */
     private int evaluarAcciones(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
             ArrayList<Barrel> barrels, ArrayList<Mine> mines, ArrayList<String> actions) {
@@ -441,8 +440,12 @@ class Ship extends Entity {
         if (speed == 0) {
             System.out.println("MOVE " + entity.getPosition().getX() + " " + entity.getPosition().getY());
         } else {
-            //mientras esta yendo a algun lugar puede disparar
-            disparar(allyShips, enemyShips, mines);
+            if (position.distanceTo(entity.getPosition()) > 1) {
+                //mientras esta yendo a algun lugar puede disparar
+                disparar(allyShips, enemyShips, mines);
+            } else {
+                System.out.println("WAIT");
+            }
         }
     }
 
@@ -457,11 +460,8 @@ class Ship extends Entity {
         if (!disparo) {
             disparo = dispararMina(mines);
             if (!disparo) {
-                if (speed == 0) {
-                    System.out.println("WAIT");
-                } else {
-                    System.out.println("SLOWER");
-                }
+                System.out.println("WAIT");
+                disparo = false;
             }
         }
         return disparo;
