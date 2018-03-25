@@ -353,14 +353,16 @@ class Ship extends Entity {
      */
     private void goBarrel(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
             ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        Barrel bar = buscarMejorBarril(barrels);
-        if (bar != null) {
-            Entity newEntity = new Entity(bar.getId(), new Hex(bar.getSidePosition(orientation).getX(),
-                    bar.getSidePosition(orientation).getY()));
-            goTo(newEntity, allyShips, enemyShips, barrels, mines);
-        } else {
-            //si no quedan barriles
-            finalStrategy(enemyShips);
+        //atacar
+        boolean disparo = disparar(allyShips, enemyShips, mines);
+        if (!disparo) {
+            Barrel bar = buscarMejorBarril(barrels);
+            if (bar != null) {
+                goTo(bar, allyShips, enemyShips, barrels, mines);
+            } else {
+                //si no quedan barriles
+                finalStrategy(enemyShips);
+            }
         }
     }
 
@@ -370,7 +372,7 @@ class Ship extends Entity {
      */
     private void tomarRum(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
             ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        Barrel bar = buscarMejorBarril(barrels);
+        Barrel bar = buscarBarrilCercano(barrels);
         if (bar != null) {
             goTo(bar, allyShips, enemyShips, barrels, mines);
         } else {
@@ -416,16 +418,21 @@ class Ship extends Entity {
         Hex newPosition;
         int oppEnemy = Direction.invert(enemyTarget.getOrientation());
         newPosition = position.getNeighbor(oppEnemy);
-        if (!newPosition.isOutOfMap()) {
-            System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
-        } else {
-            newPosition = position.getNeighbor(getPortDirection());
+        if (speed == 0) {
             if (!newPosition.isOutOfMap()) {
                 System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
             } else {
-                newPosition = position.getNeighbor(getStarboardDirection());
-                System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
+                newPosition = position.getNeighbor(getPortDirection());
+                if (!newPosition.isOutOfMap()) {
+                    System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
+                } else {
+                    newPosition = position.getNeighbor(getStarboardDirection());
+                    System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
+                }
             }
+        } else {
+            System.err.println("[Pone mina]");
+            System.out.println("MINE");
         }
     }
 
@@ -437,16 +444,7 @@ class Ship extends Entity {
 
     private void goTo(Entity entity, ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
             ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        if (speed == 0) {
-            System.out.println("MOVE " + entity.getPosition().getX() + " " + entity.getPosition().getY());
-        } else {
-            if (position.distanceTo(entity.getPosition()) > 1) {
-                //mientras esta yendo a algun lugar puede disparar
-                disparar(allyShips, enemyShips, mines);
-            } else {
-                System.out.println("WAIT");
-            }
-        }
+        System.out.println("MOVE " + entity.getPosition().getX() + " " + entity.getPosition().getY());
     }
 
     /**
@@ -460,7 +458,6 @@ class Ship extends Entity {
         if (!disparo) {
             disparo = dispararMina(mines);
             if (!disparo) {
-                System.out.println("WAIT");
                 disparo = false;
             }
         }
@@ -496,6 +493,8 @@ class Ship extends Entity {
                 disparo = true;
                 System.out.println("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
             }
+        } else {
+            System.err.println("[No enemy seen]");
         }
         return disparo;
     }
@@ -531,6 +530,29 @@ class Ship extends Entity {
     }
 
     /**
+     * Busca el barrilmas cercano.
+     *
+     * @param barrels
+     * @return
+     */
+    private Barrel buscarBarrilCercano(ArrayList<Barrel> barrels) {
+        Barrel barrelTargetMax = null;
+        int barrelDistance;
+        int distanceMax = 50;
+        for (Barrel barrel : barrels) {
+            barrelDistance = barrel.distanceTo(position);
+            if (distanceMax > barrelDistance) {
+                barrelTargetMax = barrel;
+                distanceMax = barrelDistance;
+            }
+        }
+        if (barrelTargetMax != null) {
+            System.err.println("Position [Barrel Target] = " + barrelTargetMax.getPosition().toString());
+        }
+        return barrelTargetMax;
+    }
+
+    /**
      * Busca el mejor barril segun el Rum y la distancia del enemigo. El mejor
      * barril es el que maximiza rum/distanciaEnemigo
      *
@@ -547,7 +569,7 @@ class Ship extends Entity {
         for (Barrel barrel : barrels) {
             enemyDistance = barrel.distanceTo(enemyPosition.getNeighbor(enemyTarget.getOrientation()));
             barrelRum = barrel.getRum();
-            barrelHeuristicActual = barrelRum / enemyDistance;
+            barrelHeuristicActual = barrelRum * enemyDistance;
             if (barrelHeuristicMax < barrelHeuristicActual) {
                 barrelTargetMax = barrel;
                 barrelHeuristicMax = barrelHeuristicActual;
@@ -572,21 +594,40 @@ class Ship extends Entity {
         int distanceToEnemy;
         for (Ship enemyShip : enemyShips) {
             distanceToEnemy = position.distanceTo(enemyShip.getPosition());
-            if (enemyTarget == null) {
+            if (distanceTarget > distanceToEnemy) {
                 distanceTarget = distanceToEnemy;
                 enemyTarget = enemyShip;
-            } else if (distanceToEnemy > 10 && distanceTarget > distanceToEnemy) {
-                distanceTarget = distanceToEnemy;
-                enemyTarget = enemyShip;
-            } else if (distanceToEnemy <= 10 && distanceTarget <= 10) {
-                if (enemyShip.getRum() < enemyTarget.getRum()) {
-                    distanceTarget = distanceToEnemy;
-                    enemyTarget = enemyShip;
-                }
             }
         }
         return enemyTarget;
     }
+//    /**
+//     * Busca el enemigo mas cercano. Si hay 2 enemigos en el radio de disparo,
+//     * devuelve el que tenga menos vida.
+//     *
+//     * @return
+//     */
+//    private Ship searchShortEnemy(ArrayList<Ship> enemyShips) {
+//        Ship enemyTarget = null;
+//        int distanceTarget = Integer.MAX_VALUE;
+//        int distanceToEnemy;
+//        for (Ship enemyShip : enemyShips) {
+//            distanceToEnemy = position.distanceTo(enemyShip.getPosition());
+//            if (enemyTarget == null) {
+//                distanceTarget = distanceToEnemy;
+//                enemyTarget = enemyShip;
+//            } else if (distanceToEnemy > 9 && distanceTarget > distanceToEnemy) {
+//                distanceTarget = distanceToEnemy;
+//                enemyTarget = enemyShip;
+//            } else if (distanceToEnemy <= 9 && distanceTarget <= 9) {
+//                if (enemyShip.getRum() < enemyTarget.getRum()) {
+//                    distanceTarget = distanceToEnemy;
+//                    enemyTarget = enemyShip;
+//                }
+//            }
+//        }
+//        return enemyTarget;
+//    }
 
     /**
      * Busca una mina en el camino del barco
