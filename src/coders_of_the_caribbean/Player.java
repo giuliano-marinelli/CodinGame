@@ -300,19 +300,52 @@ class Ship extends Entity {
         un valor mas alto.
         No se analizan todas las acciones posibles para un barco, la estrategia limita
         la cantidad de acciones "buenas" segun la cantidad de vida (rum) de cada barco*/
-        if (rum > 80) {
-            System.err.println("[primer estrategia]");
-            /*se acerca al mejor rum pero no lo agarra.*/
-            goBarrel(allyShips, enemyShips, barrels, mines);
-        } else if (rum > 60) {
-            System.err.println("[segunda estrategia]");
-            /*toma el rum.*/
-            tomarRum(allyShips, enemyShips, barrels, mines);
-        } else {
-            System.err.println("[tercera estrategia]");
-            /*alejarse del enemigo en busca del Rum que maximice el rum/distanciaEnemigo*/
-            alejarseEnemigoBuscarRum(allyShips, enemyShips, barrels, mines);
+        int strategy = evaluarAcciones(allyShips, enemyShips, barrels, mines, actions);
+
+        switch (strategy) {
+            case 1:
+                System.err.println("[primer estrategia]");
+                /*se acerca al mejor rum pero no lo agarra.*/
+                goBarrel(allyShips, enemyShips, barrels, mines);
+                break;
+            case 2:
+                goBarrel(allyShips, enemyShips, barrels, mines);
+                System.err.println("[segunda estrategia]");
+                /*toma el rum.*/
+                tomarRum(allyShips, enemyShips, barrels, mines);
+                break;
+            case 3:
+                goBarrel(allyShips, enemyShips, barrels, mines);
+                System.err.println("[tercera estrategia]");
+                /*alejarse del enemigo en busca del Rum que maximice el rum/distanciaEnemigo*/
+                alejarseEnemigoBuscarRum(allyShips, enemyShips, barrels, mines);
+                break;
+            default:
+                finalStrategy(enemyShips);
+
         }
+    }
+
+    /**
+     * esta funcion de evaluacion debería ser mejor
+     * @param allyShips
+     * @param enemyShips
+     * @param barrels
+     * @param mines
+     * @param actions
+     * @return 
+     */
+    private int evaluarAcciones(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
+            ArrayList<Barrel> barrels, ArrayList<Mine> mines, ArrayList<String> actions) {
+        int value = 0;
+        if (rum > 80) {
+            value = 1;
+        } else if (rum > 60) {
+            value = 2;
+        } else {
+            value = 3;
+        }
+        return value;
     }
 
     /**
