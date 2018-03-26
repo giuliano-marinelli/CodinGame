@@ -12,8 +12,7 @@ class Player {
     private static ArrayList<Cannonball> cannonballs = new ArrayList<>();
     private static ArrayList<Hex> obstacles = new ArrayList<>();
     private static ArrayList<String> actions = new ArrayList<>(
-            Arrays.asList(new String[]{"WAIT", "SLOWER", "FASTER", "STARBOARD",
-        "PORT", "MINE", "FIRE"}));
+            Arrays.asList(new String[]{"WAIT", "FASTER", "SLOWER", "MINE", "FIRE"}));
 
     private static Random random = new Random();
 
@@ -60,7 +59,6 @@ class Player {
                     }
                 }
             }
-
             for (int i = 0; i < allyShips.size(); i++) {
                 allyShips.get(i).buscarMovimiento(allyShips, enemyShips, barrels, mines, actions);
             }
@@ -300,28 +298,149 @@ class Ship extends Entity {
         un valor mas alto.
         No se analizan todas las acciones posibles para un barco, la estrategia limita
         la cantidad de acciones "buenas" segun la cantidad de vida (rum) de cada barco*/
-        int strategy = evaluarAcciones(allyShips, enemyShips, barrels, mines, actions);
+        String[][] acciones = accionesPosibles(allyShips, enemyShips, barrels, mines, actions);
+        /*seleccionar la mejor*/
+        String ejecutarAccion;
 
-        switch (strategy) {
-            case 1:
-                System.err.println("[primer estrategia]");
-                /*se acerca al mejor rum pero no lo agarra.*/
-                goBarrel(allyShips, enemyShips, barrels, mines);
-                break;
-            case 2:
-                System.err.println("[segunda estrategia]");
-                /*toma el rum.*/
-                tomarRum(allyShips, enemyShips, barrels, mines);
-                break;
-            case 3:
-                System.err.println("[tercera estrategia]");
-                /*alejarse del enemigo en busca del Rum que maximice el rum/distanciaEnemigo*/
-                alejarseEnemigoBuscarRum(allyShips, enemyShips, barrels, mines);
-                break;
-            default:
-                finalStrategy(enemyShips);
-
+        if (rum > 80) {
+            ejecutarAccion = ponderarAccion(acciones);
+        } else if (rum > 60) {
+            ejecutarAccion = ponderarAccion2(acciones);
+        } else {
+            ejecutarAccion = ponderarAccion3(acciones);
         }
+
+        System.out.println(ejecutarAccion);
+    }
+
+    /**
+     * pondera las acciones y devuelve la mejor para cuando el ron es mayor a
+     * 80;
+     *
+     * @param acciones
+     * @return
+     */
+    private String ponderarAccion(String[][] acciones) {
+        String ejecutarAccion = "WAIT";
+        int value = 0;
+        for (int i = 0; i < acciones.length; i++) {
+            switch (acciones[i][0]) {
+                case "WAIT":
+                    if (value < 3) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 3;
+                    }
+                    break;
+                case "MOVE":
+                    if (value < 5) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 5;
+                    }
+                    break;
+                case "MINE":
+                    if (value < 7) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 7;
+                    }
+                    break;
+                case "FIRE":
+                    if (value < 10) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 10;
+                    }
+                    break;
+                default:
+                    ejecutarAccion = "WAIT";
+                    value = 3;
+            }
+        }
+        return ejecutarAccion;
+    }
+
+    /**
+     * Pondera las acciones y devuelve la mejor para cuando ron > 60
+     *
+     * @param acciones
+     * @return
+     */
+    private String ponderarAccion2(String[][] acciones) {
+        String ejecutarAccion = "WAIT";
+        int value = 0;
+        for (int i = 0; i < acciones.length; i++) {
+            switch (acciones[i][0]) {
+                case "WAIT":
+                    if (value < 5) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 5;
+                    }
+                    break;
+                case "MOVE":
+                    if (value < 7) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 7;
+                    }
+                    break;
+                case "MINE":
+                    if (value < 4) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 4;
+                    }
+                    break;
+                case "FIRE":
+                    if (value < 10) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 10;
+                    }
+                    break;
+                default:
+                    ejecutarAccion = "WAIT";
+                    value = 3;
+            }
+        }
+        return ejecutarAccion;
+    }
+
+    /**
+     * ponder las acciones para cuando ron es < 60
+     *
+     * @param acciones
+     * @return
+     */
+    private String ponderarAccion3(String[][] acciones) {
+        String ejecutarAccion = "WAIT";
+        int value = 0;
+        for (int i = 0; i < acciones.length; i++) {
+            switch (acciones[i][0]) {
+                case "WAIT":
+                    if (value < 3) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 3;
+                    }
+                    break;
+                case "MOVE":
+                    if (value < 7) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 7;
+                    }
+                    break;
+                case "MINE":
+                    if (value < 9) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 9;
+                    }
+                    break;
+                case "FIRE":
+                    if (value < 4) {
+                        ejecutarAccion = acciones[i][1];
+                        value = 4;
+                    }
+                    break;
+                default:
+                    ejecutarAccion = "WAIT";
+                    value = 3;
+            }
+        }
+        return ejecutarAccion;
     }
 
     /**
@@ -334,169 +453,91 @@ class Ship extends Entity {
      * @param actions
      * @return
      */
-    private int evaluarAcciones(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
+    private String[][] accionesPosibles(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
             ArrayList<Barrel> barrels, ArrayList<Mine> mines, ArrayList<String> actions) {
-        int value = 0;
-        if (rum > 80) {
-            value = 1;
-        } else if (rum > 60) {
-            value = 2;
-        } else {
-            value = 3;
-        }
-        return value;
-    }
-
-    /**
-     * Se acerca al barril pero no lo toma. Si estaba en movimiento hacia el
-     * barril puede disparar
-     */
-    private void goBarrel(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
-            ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        //atacar
-        boolean disparo = disparar(allyShips, enemyShips, mines);
-        if (!disparo) {
-            Barrel bar = buscarMejorBarril(barrels);
-            if (bar != null) {
-                goTo(bar, allyShips, enemyShips, barrels, mines);
+        String acciones[][] = new String[4][2];
+        Ship enemyTarget;
+        Barrel bar = null;
+        Mine mine;
+        mine = searchMineOnDirection(mines);
+        /*si la velocidad es mayor a cero, prioriza el disparo a minas que esten en 
+        su camino. si la velocidad es cero, prioriza el disparo a enemigos.*/
+        if (speed > 0) {
+            if (mine != null) {
+                acciones[0][1] = fireToMine(mine);
+                acciones[0][0] = "FIRE";
             } else {
-                //si no quedan barriles
-                finalStrategy(enemyShips);
-            }
-        }
-    }
-
-    /**
-     * toma el Rum del barril que esté mas cerca. Si no quedan barriles puede
-     * disparar
-     */
-    private void tomarRum(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
-            ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        Barrel bar = buscarBarrilCercano(barrels);
-        if (bar != null) {
-            goTo(bar, allyShips, enemyShips, barrels, mines);
-        } else {
-            //si no quedan barriles.
-            finalStrategy(enemyShips);
-        }
-    }
-
-    /**
-     * se aleja del enemigo en busca de un barril.
-     */
-    private void alejarseEnemigoBuscarRum(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
-            ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        Ship enemyTarget = searchShortEnemy(enemyShips);
-        Barrel bar = buscarMejorBarril(barrels, enemyTarget);
-        if (bar != null) {
-            goTo(bar, allyShips, enemyShips, barrels, mines);
-        } else {
-            /*si no quedan barriles y se tiene mas vida que el enemigo alejarse. 
-            Si se tiene menos vida que el enemigo tratar de matarlo primero.*/
-            finalStrategy(enemyShips);
-        }
-    }
-
-    /**
-     * Si no quedan barriles se aleja del enemigo si tiene mas vida o se acerca
-     * a matarlo si tiene menos vida.
-     *
-     * @param enemyShips
-     */
-    private void finalStrategy(ArrayList<Ship> enemyShips) {
-        System.err.println("[Final Strategy]");
-        Ship enemyTarget = searchShortEnemy(enemyShips);
-        if (rum > enemyTarget.getRum()) {
-            alejarseEnemigo(enemyTarget);
-        } else {
-            /*buscar enemigo*/
-            buscarEnemigo(enemyTarget);
-        }
-    }
-
-    private void alejarseEnemigo(Ship enemyTarget) {
-        Hex newPosition;
-        int oppEnemy = Direction.invert(enemyTarget.getOrientation());
-        newPosition = position.getNeighbor(oppEnemy);
-        if (speed == 0) {
-            if (!newPosition.isOutOfMap()) {
-                System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
-            } else {
-                newPosition = position.getNeighbor(getPortDirection());
-                if (!newPosition.isOutOfMap()) {
-                    System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
+                enemyTarget = dispararEnemigo(enemyShips);
+                if (enemyTarget != null) {
+                    acciones[0][1] = fireToEnemy(enemyTarget);
+                    acciones[0][0] = "FIRE";
                 } else {
-                    newPosition = position.getNeighbor(getStarboardDirection());
-                    System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
+                    acciones[0][0] = "NULL";
                 }
             }
         } else {
-            System.err.println("[Pone mina]");
-            System.out.println("MINE");
-        }
-    }
-
-    private void buscarEnemigo(Ship enemyTarget) {
-        Hex newPosition;
-        newPosition = enemyTarget.getPosition();
-        System.out.println("MOVE " + newPosition.getX() + " " + newPosition.getY());
-    }
-
-    private void goTo(Entity entity, ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips,
-            ArrayList<Barrel> barrels, ArrayList<Mine> mines) {
-        System.out.println("MOVE " + entity.getPosition().getX() + " " + entity.getPosition().getY());
-    }
-
-    /**
-     * puede disparar a minas o ships. los ships enemigos tienen prioridad
-     *
-     * @param enemyTarget
-     */
-    public boolean disparar(ArrayList<Ship> allyShips, ArrayList<Ship> enemyShips, ArrayList<Mine> mines) {
-        boolean disparo;
-        disparo = dispararEnemigo(enemyShips);
-        if (!disparo) {
-            disparo = dispararMina(mines);
-            if (!disparo) {
-                disparo = false;
-            }
-        }
-        return disparo;
-    }
-
-    private boolean dispararMina(ArrayList<Mine> mines) {
-        boolean disparo = false;
-        /*disparar a minas cercanas*/
-        Mine mine = searchMineOnDirection(mines);
-        if (mine != null) {
-            disparo = true;
-            System.out.println("FIRE " + mine.getPosition().getX() + " " + mine.getPosition().getY());
-        }
-        return disparo;
-    }
-
-    private boolean dispararEnemigo(ArrayList<Ship> enemyShips) {
-        boolean disparo = false;
-        Ship enemyTarget = searchShortEnemy(enemyShips);
-        if (enemyTarget != null) {
-            int distanceToEnemy = position.distanceTo(enemyTarget.getPosition());
-            if (distanceToEnemy <= 10) {
-                int attackDirection = enemyTarget.getOrientation();
-                Hex futureEnemyHex = enemyTarget.getPosition();
-                int j = 0;
-                while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
-                    futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
-                    j++;
+            enemyTarget = dispararEnemigo(enemyShips);
+            if (enemyTarget != null) {
+                acciones[0][1] = fireToEnemy(enemyTarget);
+                acciones[0][0] = "FIRE";
+            } else {
+                mine = searchMineOnDirection(mines);
+                if (mine != null) {
+                    acciones[0][1] = fireToMine(mine);
+                    acciones[0][0] = "FIRE";
+                } else {
+                    acciones[0][0] = "NULL";
                 }
-                System.err.println("[Disparar enemigo]");
-                System.err.println("Distance [EnemyShip] = " + distanceToEnemy);
-                disparo = true;
-                System.out.println("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
             }
-        } else {
-            System.err.println("[No enemy seen]");
         }
-        return disparo;
+
+        buscarBarrilCercano(barrels);
+        if (bar != null) {
+            acciones[1][1] = goTo(bar);
+            acciones[1][0] = "MOVE";
+        } else {
+            acciones[1][0] = "NULL";
+        }
+
+        /*siempre puede poner mina*/
+        acciones[2][1] = "MINE";
+        acciones[2][0] = "MINE";
+
+        /*si no choca con nada puede seguir su trayectoria*/
+        if (super.collide(enemyShips) || super.collide(allyShips) || super.collide(mines)) {
+            acciones[3][1] = "WAIT";
+            acciones[3][0] = "NULL";
+        } else {
+            acciones[3][1] = "WAIT";
+            acciones[3][0] = "WAIT";
+        }
+
+        return acciones;
+    }
+
+    private String goTo(Entity entity) {
+        return ("MOVE " + entity.getPosition().getX() + " " + entity.getPosition().getY());
+    }
+
+    private String fireToEnemy(Ship enemyTarget) {
+        int attackDirection = enemyTarget.getOrientation();
+        int distanceToEnemy = position.distanceTo(enemyTarget.getPosition());
+        Hex futureEnemyHex = enemyTarget.getPosition();
+        int j = 0;
+        while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
+            futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
+            j++;
+        }
+        System.err.println("[Fire to Enemy]");
+        System.err.println("Distance [EnemyShip] = " + distanceToEnemy);
+        return ("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
+    }
+
+    private String fireToMine(Mine mine) {
+        Hex posMine = mine.getPosition();
+        System.err.println("[Fire to Mine]");
+        System.err.println("Distance [Mine] = " + posMine.distanceTo(front));
+        return ("FIRE " + posMine.getX() + " " + posMine.getY());
     }
 
     /**
@@ -582,9 +623,29 @@ class Ship extends Entity {
         return barrelTargetMax;
     }
 
+    private Ship dispararEnemigo(ArrayList<Ship> enemyShips) {
+        Ship enemyTarget = searchShortEnemy(enemyShips);
+        if (enemyTarget != null) {
+            int distanceToEnemy = position.distanceTo(enemyTarget.getPosition());
+            if (distanceToEnemy <= 10) {
+                int attackDirection = enemyTarget.getOrientation();
+                Hex futureEnemyHex = enemyTarget.getPosition();
+                int j = 0;
+                while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
+                    futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
+                    j++;
+                }
+            } else {
+                enemyTarget = null;
+            }
+        } else {
+            System.err.println("[No enemy seen]");
+        }
+        return enemyTarget;
+    }
+
     /**
-     * Busca el enemigo mas cercano. Si hay 2 enemigos en el radio de disparo,
-     * devuelve el que tenga menos vida.
+     * Busca el enemigo mas cercano.
      *
      * @return
      */
@@ -601,33 +662,6 @@ class Ship extends Entity {
         }
         return enemyTarget;
     }
-//    /**
-//     * Busca el enemigo mas cercano. Si hay 2 enemigos en el radio de disparo,
-//     * devuelve el que tenga menos vida.
-//     *
-//     * @return
-//     */
-//    private Ship searchShortEnemy(ArrayList<Ship> enemyShips) {
-//        Ship enemyTarget = null;
-//        int distanceTarget = Integer.MAX_VALUE;
-//        int distanceToEnemy;
-//        for (Ship enemyShip : enemyShips) {
-//            distanceToEnemy = position.distanceTo(enemyShip.getPosition());
-//            if (enemyTarget == null) {
-//                distanceTarget = distanceToEnemy;
-//                enemyTarget = enemyShip;
-//            } else if (distanceToEnemy > 9 && distanceTarget > distanceToEnemy) {
-//                distanceTarget = distanceToEnemy;
-//                enemyTarget = enemyShip;
-//            } else if (distanceToEnemy <= 9 && distanceTarget <= 9) {
-//                if (enemyShip.getRum() < enemyTarget.getRum()) {
-//                    distanceTarget = distanceToEnemy;
-//                    enemyTarget = enemyShip;
-//                }
-//            }
-//        }
-//        return enemyTarget;
-//    }
 
     /**
      * Busca una mina en el camino del barco
@@ -654,6 +688,7 @@ class Ship extends Entity {
             System.err.println("Position [mine]: " + mineTarget.getPosition().toString());
         }
         return mineTarget;
+
     }
 
 }
