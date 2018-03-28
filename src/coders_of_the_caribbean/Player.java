@@ -88,8 +88,7 @@ class Player {
                 enemyTarget = getCloseEnemy(ally, enemyShips);
 
                 hillClimbing(ally);
-
-                //simulatedAnnealing(i);
+                simulatedAnnealing(ally);
             }
         }
     }
@@ -117,11 +116,8 @@ class Player {
         }
 
         //imprimo la accion que obtuvo mayor valor segun la estrategia
-        if (indexMax != 6) {
-            System.out.println(ACTIONS.get(indexMax));
-        } else {
-            accion6(ally);
-        }
+        //imprimirAccion(ACTIONS.get(indexMax), ally);
+        imprimirAccionSinHacerla(ACTIONS.get(indexMax), ally);
     }
 
     public static void accion6(Ship ally) {
@@ -147,36 +143,41 @@ class Player {
 
     public static void simulatedAnnealing(Ship ally) {
         Ship currentState = ally;
-        Ship bestState = currentState;
         Ship stateItera;
-        int actionCurrent = 0;
-        int actionBest = 0;
-        int actionItera = 0;
-        float currentTemp;
-        float maxTemp = 20;
-        int kmax = 20;
-        for (int k = 1; k < kmax; k++) {
-            currentTemp = k / maxTemp;
+        String defaultAction = "WAIT";
+        float T;
+        int kmax = 2000;
+        int deltaE;
+        for (int t = 1; t < kmax; t += 20) {
+            T = t / kmax;
             String action = ACTIONS.get(random.nextInt(7));
             stateItera = currentState.getFutureShip(action);
-            actionItera = ACTIONS.indexOf(action);
-            if (strategy(stateItera, stateItera, action) <= strategy(currentState, currentState, action)) {
+            // ∆E = value(nextState)-value(currentState)
+            deltaE = strategy(stateItera, stateItera, action) - strategy(currentState, currentState, defaultAction);
+            if (deltaE > 0) {
                 currentState = stateItera;
-                actionCurrent = actionItera;
-                if (strategy(stateItera, stateItera, action) <= strategy(bestState, bestState, action)) {
-                    bestState = stateItera;
-                    actionBest = actionItera;
-                }
-            } else if ((strategy(currentState, currentState, action)
-                    - strategy(stateItera, stateItera, action)) / currentTemp > random.nextFloat()) {
+                defaultAction = action;
+            } else if (Math.pow(Math.E, deltaE / T) > Math.random()) {
                 currentState = stateItera;
-                actionCurrent = actionItera;
+                defaultAction = action;
             }
         }
 
         //imprimo la accion que obtuvo mayor valor segun la estrategia
-        if (actionBest != 6) {
-            System.out.println(ACTIONS.get(actionBest));
+        imprimirAccion(defaultAction, ally);
+    }
+
+    public static void imprimirAccion(String bestAction, Ship ally) {
+        if (!bestAction.equals("FIRE")) {
+            System.out.println(bestAction);
+        } else {
+            accion6(ally);
+        }
+    }
+
+    public static void imprimirAccionSinHacerla(String bestAction, Ship ally) {
+        if (!bestAction.equals("FIRE")) {
+            System.err.println("[Hill-Climbing]: " + bestAction);
         } else {
             accion6(ally);
         }
