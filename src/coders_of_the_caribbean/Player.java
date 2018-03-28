@@ -96,8 +96,6 @@ class Player {
 
     public static void hillClimbing(Ship ally) {
         ArrayList<Ship> futureShips = new ArrayList<>();
-        ArrayList<Ship> enemyTargets = new ArrayList<>();
-        int distanceToEnemy = 0;
 
         //obtengo todos los posibles barcos dados cada accion
         for (int a = 0; a < ACTIONS.size(); a++) {
@@ -122,29 +120,32 @@ class Player {
         if (indexMax != 6) {
             System.out.println(ACTIONS.get(indexMax));
         } else {
-            int attackDirection = enemyTarget.getOrientation();
-            if (ally.getId() > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
-                attackDirection = enemyTarget.getPortDirection();
-            }
-            Hex futureEnemyHex = enemyTarget.getPosition();
-            int j = 0;
-            distanceToEnemy = ally.getFront().distanceTo(enemyTarget.getPosition());
-            while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
-                futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
-                j++;
-            }
-            enemyTargets.add(enemyTarget);
-            //caso para la accion FIRE que requiere coordenadas
-            System.out.println(ACTIONS.get(indexMax) + " "
-                    + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
+            accion6(ally);
         }
     }
 
-    public static void simulatedAnnealing(Ship ally) {
-        ArrayList<Ship> futureShips = new ArrayList<>();
+    public static void accion6(Ship ally) {
         ArrayList<Ship> enemyTargets = new ArrayList<>();
         int distanceToEnemy = 0;
 
+        int attackDirection = enemyTarget.getOrientation();
+        if (ally.getId() > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
+            attackDirection = enemyTarget.getPortDirection();
+        }
+        Hex futureEnemyHex = enemyTarget.getPosition();
+        int j = 0;
+        distanceToEnemy = ally.getFront().distanceTo(enemyTarget.getPosition());
+        while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
+            futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
+            j++;
+        }
+        enemyTargets.add(enemyTarget);
+        //caso para la accion FIRE que requiere coordenadas
+        System.out.println(ACTIONS.get(6) + " "
+                + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
+    }
+
+    public static void simulatedAnnealing(Ship ally) {
         Ship currentState = ally;
         Ship bestState = currentState;
         Ship stateItera;
@@ -177,20 +178,7 @@ class Player {
         if (actionBest != 6) {
             System.out.println(ACTIONS.get(actionBest));
         } else {
-            int attackDirection = enemyTarget.getOrientation();
-            if (ally.getId() > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
-                attackDirection = enemyTarget.getPortDirection();
-            }
-            Hex futureEnemyHex = enemyTarget.getPosition();
-            int j = 0;
-            while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
-                futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
-                j++;
-            }
-            enemyTargets.add(enemyTarget);
-            //caso para la accion FIRE que requiere coordenadas
-            System.out.println(ACTIONS.get(actionBest) + " "
-                    + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
+            accion6(ally);
         }
     }
 
