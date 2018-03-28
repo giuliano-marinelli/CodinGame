@@ -13,13 +13,9 @@ class Player {
     private static ArrayList<Mine> mines = new ArrayList<>();
     private static ArrayList<Cannonball> cannonballs = new ArrayList<>();
     private static ArrayList<Hex> obstacles = new ArrayList<>();
-    private static ArrayList<Ship> futureShips = new ArrayList<>();
-    private static ArrayList<Ship> enemyTargets = new ArrayList<>();
     private static Ship enemyTarget = null;
-    private static int distanceToEnemy = 0;
     private static Barrel barrelTarget = null;
-    private static float barrelHeuristicActual = 0;
-    private static float barrelHeuristicMax = 0;
+
     private static Random random = new Random();
 
     public static void main(String args[]) {
@@ -32,8 +28,6 @@ class Player {
             barrels.clear();
             mines.clear();
             obstacles.clear();
-            futureShips.clear();
-            enemyTargets.clear();
             //numero de barcos aliados que quedan
             int myShipCount = in.nextInt();
             //numero de entidades (ships, barrels, mines, cannonballs)
@@ -47,25 +41,30 @@ class Player {
                 int arg2 = in.nextInt();
                 int arg3 = in.nextInt();
                 int arg4 = in.nextInt();
-                if (entityType.equals("SHIP")) {
-                    if (arg4 == 1) {
-                        allyShips.add(new Ship(entityId, new Hex(x, y), arg1, arg2, arg3, arg4 == 1));
-                    } else if (arg4 == 0) {
-                        enemyShips.add(new Ship(entityId, new Hex(x, y), arg1, arg2, arg3, arg4 == 1));
-                    }
-                    Hex position = new Hex(x, y);
-                    obstacles.add(position);
-                    obstacles.add(position.getNeighbor(arg1));
-                    obstacles.add(position.getNeighbor(Direction.invert(arg1)));
-                } else if (entityType.equals("BARREL")) {
-                    barrels.add(new Barrel(entityId, new Hex(x, y), arg1));
-                } else if (entityType.equals("MINE")) {
-                    mines.add(new Mine(entityId, new Hex(x, y)));
-                } else if (entityType.equals("CANNONBALL")) {
-                    cannonballs.add(new Cannonball(entityId, new Hex(x, y), arg1, arg2));
-                    if (arg2 == 1) {
-                        obstacles.add(new Hex(x, y));
-                    }
+                switch (entityType) {
+                    case "SHIP":
+                        if (arg4 == 1) {
+                            allyShips.add(new Ship(entityId, new Hex(x, y), arg1, arg2, arg3, arg4 == 1));
+                        } else if (arg4 == 0) {
+                            enemyShips.add(new Ship(entityId, new Hex(x, y), arg1, arg2, arg3, arg4 == 1));
+                        }   Hex position = new Hex(x, y);
+                        obstacles.add(position);
+                        obstacles.add(position.getNeighbor(arg1));
+                        obstacles.add(position.getNeighbor(Direction.invert(arg1)));
+                        break;
+                    case "BARREL":
+                        barrels.add(new Barrel(entityId, new Hex(x, y), arg1));
+                        break;
+                    case "MINE":
+                        mines.add(new Mine(entityId, new Hex(x, y)));
+                        break;
+                    case "CANNONBALL":
+                        cannonballs.add(new Cannonball(entityId, new Hex(x, y), arg1, arg2));
+                        if (arg2 == 1) {
+                            obstacles.add(new Hex(x, y));
+                        }   break;
+                    default:
+                        break;
                 }
             }
 
@@ -79,109 +78,28 @@ class Player {
             }
 
             for (int i = 0; i < myShipCount; i++) {
-
+                Ship ally = allyShips.get(i);
                 //para obtener el mejor barril a buscar
-                barrelTarget = null;
-                barrelHeuristicMax = 0;
-                int distanceToBarrel = 0;
-                for (Barrel barrel : barrels) {
-                    //barrelDistance = hexDistance(
-                    //        allyShips.get(i).getPosition(), barrel.getPosition());
-                    distanceToBarrel = allyShips.get(i).getFront().distanceTo(barrel.getPosition());
-                    barrelHeuristicActual = barrel.getRum() / distanceToBarrel;
-                    if (barrelHeuristicMax < barrelHeuristicActual) {
-                        barrelTarget = barrel;
-                        barrelHeuristicMax = barrelHeuristicActual;
-                    }
-                }
+                barrelTarget = getMejorBarril(ally, barrels);
 
                 //para obtener el enemigo mas cercano
-                enemyTarget = null;
-                distanceToEnemy = Integer.MAX_VALUE;
-                int distanceToEnemyActual;
-                for (Ship enemyShip : enemyShips) {
-                    distanceToEnemyActual = allyShips.get(i).getFront().distanceTo(enemyShip.getPosition());
-                    if (distanceToEnemyActual < distanceToEnemy) {
-                        distanceToEnemy = distanceToEnemyActual;
-                        enemyTarget = enemyShip;
-                    }
-                }
+                enemyTarget = getCloseEnemy(ally, enemyShips);
 
-                hillClimbing(i);
+                hillClimbing(ally);
 
                 //simulatedAnnealing(i);
-
-//
-//                if (barrelTarget != null && ((barrelTarget.getRum() <= (100 - allyShips.get(i).getRum()) && distanceToEnemy > 10)
-//                        || allyShips.get(i).getSpeed() == 0)) {
-//
-//                    //PARA MOVERSE DE A UNA CASILLA
-//                    //moveToTarget(i, barrelTarget.getPosition());
-//                    //MOVERSE DE FORMA CLASICA
-//                    //System.out.println("MOVE " + barrelTarget.getPosition().getX() + " " + barrelTarget.getPosition().getY());
-//                    System.err.println("[Barrel Target] = ("
-//                            + barrelTarget.getPosition().getX() + ","
-//                            + barrelTarget.getPosition().getY() + ")");
-//                    System.err.println("Heuristic [Barrel Target] = " + barrelHeuristicMax);
-//
-//                } else if (enemyTarget != null) {
-//                    Hex hexForward = hexOffsetNeighbor(allyShips.get(i).getPosition(), allyShips.get(i).getOrientation());
-//                    Hex hexStraightTop = hexOffsetNeighbor(hexForward, allyShips.get(i).getOrientation());
-//                    if (distanceToEnemy > 7 || allyShips.get(i).getSpeed() < 1
-//                            || (hexStraightTop != null && hexCollide(hexStraightTop, mines))) {
-//                        if (barrelTarget != null) {
-//                            //moveToTarget(i, barrelTarget.getPosition());
-//                        } else {
-//                            //moveToTarget(i, enemyTarget.getPosition());
-//                        }
-//                        //System.out.println("MOVE " + enemyTarget.getPosition().getX() + " " + enemyTarget.getPosition().getY());
-//                    } else if (distanceToEnemy <= 7) {
-//                        int attackDirection = enemyTarget.getOrientation();
-//                        if (i > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
-//                            attackDirection = enemyTarget.getLeftDirection();
-//                        }
-//                        Hex futureEnemyHex = enemyTarget.getPosition();
-//                        int j = 0;
-//                        while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !hexBorderOfMap(futureEnemyHex)) {
-//                            /*int randomDirection;
-//                            switch (random.nextInt(3)) {
-//                                case 0:
-//                                    randomDirection = enemyTarget.getOrientation();
-//                                    break;
-//                                case 1:
-//                                    randomDirection = enemyTarget.getLeftDirection();
-//                                    break;
-//                                case 2:
-//                                    randomDirection = enemyTarget.getRightDirection();
-//                                    break;
-//                                default:
-//                                    randomDirection = enemyTarget.getOrientation();
-//                                    break;
-//                            }*/
-//                            futureEnemyHex = hexOffsetNeighbor(futureEnemyHex, attackDirection);
-//                            j++;
-//                        }
-//                        System.out.println("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
-//                    }
-//                    /*else if (distanceToEnemy >= 10) {
-//                        System.out.println("MINE");
-//                    }*/
-//                    System.err.println("Distance [EnemyShip] = " + distanceToEnemy);
-//
-//                    //MOVIMIENTO ALEATORIO
-//                    //System.out.println("MOVE " + random.nextInt(22) + " " + random.nextInt(20));
-//                    enemyTargets.add(enemyTarget);
-//                }
             }
         }
     }
 
-    public static void hillClimbing(int shipIndex) {
-        futureShips.clear();
+    public static void hillClimbing(Ship ally) {
+        ArrayList<Ship> futureShips = new ArrayList<>();
+        ArrayList<Ship> enemyTargets = new ArrayList<>();
+        int distanceToEnemy = 0;
 
         //obtengo todos los posibles barcos dados cada accion
         for (int a = 0; a < ACTIONS.size(); a++) {
-            futureShips.add(allyShips.get(shipIndex).getFutureShip(ACTIONS.get(a)));
+            futureShips.add(ally.getFutureShip(ACTIONS.get(a)));
             //futureShips.add(allyShips.get(i).getFutureShipWithObstacles(ACTIONS[a], obstacles));
         }
 
@@ -190,12 +108,12 @@ class Player {
         int strategyMax = Integer.MIN_VALUE;
         int strategyActual = 0;
         for (int fs = 0; fs < futureShips.size(); fs++) {
-            strategyActual = strategy(allyShips.get(shipIndex), futureShips.get(fs), ACTIONS.get(fs));
+            strategyActual = strategy(ally, futureShips.get(fs), ACTIONS.get(fs));
             if (strategyActual > strategyMax) {
                 strategyMax = strategyActual;
                 indexMax = fs;
             }
-            System.err.println("(" + shipIndex + ")" + ACTIONS.get(fs) + " : " + strategyActual);
+            System.err.println("(" + ally.getId() + ")" + ACTIONS.get(fs) + " : " + strategyActual);
         }
 
         //imprimo la accion que obtuvo mayor valor segun la estrategia
@@ -203,7 +121,7 @@ class Player {
             System.out.println(ACTIONS.get(indexMax));
         } else {
             int attackDirection = enemyTarget.getOrientation();
-            if (shipIndex > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
+            if (ally.getId() > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
                 attackDirection = enemyTarget.getPortDirection();
             }
             Hex futureEnemyHex = enemyTarget.getPosition();
@@ -219,59 +137,89 @@ class Player {
         }
     }
 
-    public static void simulatedAnnealing(int shipIndex) {
-        futureShips.clear();
-
-        Ship currentState = allyShips.get(shipIndex);
-        Ship bestState = currentState;
-        Ship stateItera;
-        int actionCurrent = 0;
-        int actionBest = 0;
-        int actionItera = 0;
-        float currentTemp;
-        float maxTemp = 20;
-        int kmax = 20;
-        for (int k = 1; k < kmax; k++) {
-            currentTemp = k / maxTemp;
-            String action = ACTIONS.get(random.nextInt(7));
-            stateItera = currentState.getFutureShip(action);
-            actionItera = ACTIONS.indexOf(action);
-            if (strategy(stateItera, stateItera, action) <= strategy(currentState, currentState, action)) {
-                currentState = stateItera;
-                actionCurrent = actionItera;
-                if (strategy(stateItera, stateItera, action) <= strategy(bestState, bestState, action)) {
-                    bestState = stateItera;
-                    actionBest = actionItera;
-                }
-            } else if ((strategy(currentState, currentState, action)
-                    - strategy(stateItera, stateItera, action)) / currentTemp > random.nextFloat()) {
-                currentState = stateItera;
-                actionCurrent = actionItera;
+//    public static void simulatedAnnealing(int shipIndex) {
+//        futureShips.clear();
+//
+//        Ship currentState = allyShips.get(shipIndex);
+//        Ship bestState = currentState;
+//        Ship stateItera;
+//        int actionCurrent = 0;
+//        int actionBest = 0;
+//        int actionItera = 0;
+//        float currentTemp;
+//        float maxTemp = 20;
+//        int kmax = 20;
+//        for (int k = 1; k < kmax; k++) {
+//            currentTemp = k / maxTemp;
+//            String action = ACTIONS.get(random.nextInt(7));
+//            stateItera = currentState.getFutureShip(action);
+//            actionItera = ACTIONS.indexOf(action);
+//            if (strategy(stateItera, stateItera, action) <= strategy(currentState, currentState, action)) {
+//                currentState = stateItera;
+//                actionCurrent = actionItera;
+//                if (strategy(stateItera, stateItera, action) <= strategy(bestState, bestState, action)) {
+//                    bestState = stateItera;
+//                    actionBest = actionItera;
+//                }
+//            } else if ((strategy(currentState, currentState, action)
+//                    - strategy(stateItera, stateItera, action)) / currentTemp > random.nextFloat()) {
+//                currentState = stateItera;
+//                actionCurrent = actionItera;
+//            }
+//        }
+//
+//        //imprimo la accion que obtuvo mayor valor segun la estrategia
+//        if (actionBest != 6) {
+//            System.out.println(ACTIONS.get(actionBest));
+//        } else {
+//            int attackDirection = enemyTarget.getOrientation();
+//            if (shipIndex > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
+//                attackDirection = enemyTarget.getPortDirection();
+//            }
+//            Hex futureEnemyHex = enemyTarget.getPosition();
+//            int j = 0;
+//            while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
+//                futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
+//                j++;
+//            }
+//            enemyTargets.add(enemyTarget);
+//            //caso para la accion FIRE que requiere coordenadas
+//            System.out.println(ACTIONS.get(actionBest) + " "
+//                    + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
+//        }
+//    }
+    public static Barrel getMejorBarril(Ship ally, ArrayList<Barrel> barrels) {
+        float barrelHeuristicActual = 0;
+        float barrelHeuristicMax = 0;
+        Barrel barrelTarget = null;
+        int distanceToBarrel = 0;
+        for (Barrel barrel : barrels) {
+            distanceToBarrel = ally.getFront().distanceTo(barrel.getPosition());
+            barrelHeuristicActual = barrel.getRum() / distanceToBarrel;
+            if (barrelHeuristicMax < barrelHeuristicActual) {
+                barrelTarget = barrel;
+                barrelHeuristicMax = barrelHeuristicActual;
             }
         }
-
-        //imprimo la accion que obtuvo mayor valor segun la estrategia
-        if (actionBest != 6) {
-            System.out.println(ACTIONS.get(actionBest));
-        } else {
-            int attackDirection = enemyTarget.getOrientation();
-            if (shipIndex > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
-                attackDirection = enemyTarget.getPortDirection();
-            }
-            Hex futureEnemyHex = enemyTarget.getPosition();
-            int j = 0;
-            while (j < (1 + distanceToEnemy / 3) * enemyTarget.getSpeed() && !futureEnemyHex.isOutOfMap()) {
-                futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
-                j++;
-            }
-            enemyTargets.add(enemyTarget);
-            //caso para la accion FIRE que requiere coordenadas
-            System.out.println(ACTIONS.get(actionBest) + " "
-                    + futureEnemyHex.getX() + " " + futureEnemyHex.getY());
-        }
+        return barrelTarget;
     }
 
-    public static int strategy(Ship currentShip, Ship neighborShip, String action) {
+    public static Ship getCloseEnemy(Ship ally, ArrayList<Ship> enemyShips) {
+        int distanceToEnemy;
+        distanceToEnemy = Integer.MAX_VALUE;
+        int distanceToEnemyActual;
+        Ship enemyTarget = null;
+        for (Ship enemyShip : enemyShips) {
+            distanceToEnemyActual = ally.getFront().distanceTo(enemyShip.getPosition());
+            if (distanceToEnemyActual < distanceToEnemy) {
+                distanceToEnemy = distanceToEnemyActual;
+                enemyTarget = enemyShip;
+            }
+        }
+        return enemyTarget;
+    }
+
+    public static int strategy(Ship ally, Ship neighborShip, String action) {
         int value = 20;
 
         if (barrelTarget != null) {
@@ -292,11 +240,11 @@ class Player {
             value = value + 2;
         }
 
-        if (action == "PORT") {
+        if (action.equals("PORT")) {
             value = value + 1;
         }
-
-        if (action == "FIRE") {
+        int distanceToEnemy = ally.getFront().distanceTo(enemyTarget.getPosition());
+        if (action.equals("FIRE")) {
             if (neighborShip.getSpeed() > 0) {
                 if (distanceToEnemy < 5) {
                     value = value + 10;
@@ -308,7 +256,7 @@ class Player {
             }
         }
 
-        if (action == "MINE") {
+        if (action.equals("MINE")) {
             if (neighborShip.getSpeed() > 0 && distanceToEnemy > 10) {
                 value = value + 5;
             } else {
@@ -316,7 +264,7 @@ class Player {
             }
         }
 
-        if (action == "FASTER") {
+        if (action.equals("FASTER")) {
             if (!neighborShip.getFront().equals(obstacles)) {
                 if (neighborShip.getSpeed() == 0) {
                     value = value + 5;
@@ -330,7 +278,7 @@ class Player {
             }
         }
 
-        if (action == "SLOWER") {
+        if (action.equals("SLOWER")) {
             if (neighborShip.getSpeed() == 0) {
                 value = value - 10;
             } else if (barrelTarget != null) {
@@ -340,7 +288,7 @@ class Player {
             }
         }
 
-        if (action == "WAIT" && neighborShip.getSpeed() == 0) {
+        if (action.equals("WAIT") && neighborShip.getSpeed() == 0) {
             value = value - 10;
         }
 
