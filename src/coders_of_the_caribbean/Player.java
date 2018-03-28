@@ -454,11 +454,11 @@ class Ship extends Entity {
         Ship futureShip = new Ship(id, position, orientation, speed, rum, isAlly);
 
         //acciones que cambian la velocidad
-        if (action == "SLOWER") {
+        if (action.equals("SLOWER")) {
             if (speed > 0) {
                 futureShip.setSpeed(speed - 1);
             }
-        } else if (action == "FASTER") {
+        } else if (action.equals("FASTER")) {
             if (speed < 2) {
                 futureShip.setSpeed(speed + 1);
             }
@@ -468,9 +468,9 @@ class Ship extends Entity {
         futureShip.setPosition(position.getNeighbor(orientation, futureShip.getSpeed()));
 
         //acciones que cambian la orientacion
-        if (action == "PORT") {
+        if (action.equals("PORT")) {
             futureShip.setOrientation(getPortDirection());
-        } else if (action == "STARBOARD") {
+        } else if (action.equals("STARBOARD")) {
             futureShip.setOrientation(getStarboardDirection());
         }
 
@@ -486,11 +486,11 @@ class Ship extends Entity {
         Ship futureShip = new Ship(id, position, orientation, speed, rum, isAlly);
 
         //acciones que cambian la velocidad
-        if (action == "SLOWER") {
+        if (action.equals("SLOWER")) {
             if (speed > 0) {
                 futureShip.setSpeed(speed - 1);
             }
-        } else if (action == "FASTER") {
+        } else if (action.equals("FASTER")) {
             if (speed < 2) {
                 futureShip.setSpeed(speed + 1);
             }
@@ -511,9 +511,9 @@ class Ship extends Entity {
         futureShip.setPosition(futurePosition);
 
         //acciones que cambian la orientacion
-        if (action == "PORT") {
+        if (action.equals("PORT")) {
             futureShip.setOrientation(getPortDirection());
-        } else if (action == "STARBOARD") {
+        } else if (action.equals("STARBOARD")) {
             futureShip.setOrientation(getStarboardDirection());
         }
 
