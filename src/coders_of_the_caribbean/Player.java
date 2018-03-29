@@ -15,6 +15,7 @@ class Player {
     private static ArrayList<Hex> obstacles = new ArrayList<>();
     private static Ship enemyTarget = null;
     private static Barrel barrelTarget = null;
+    public static int temperatura;
 
     private static Random random = new Random();
 
@@ -148,8 +149,8 @@ class Player {
         float T;
         int kmax = 2000;
         int deltaE;
-        for (int t = 1; t < kmax; t += 20) {
-            T = t / kmax;
+        for (temperatura = 1; temperatura < kmax; temperatura += 35) {
+            T = temperatura / kmax;
             String action = ACTIONS.get(random.nextInt(7));
             stateItera = currentState.getFutureShip(action);
             // ∆E = value(nextState)-value(currentState)
