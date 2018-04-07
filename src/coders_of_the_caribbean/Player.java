@@ -12,7 +12,6 @@ class Player {
     private static ArrayList<Barrel> barrels = new ArrayList<>();
     private static ArrayList<Mine> mines = new ArrayList<>();
     private static ArrayList<Cannonball> cannonballs = new ArrayList<>();
-    private static ArrayList<Ship> enemyTargets = new ArrayList<>();
     private static ArrayList<Hex> mapLimits = new ArrayList<>();
     private static ArrayList<String> lastActions = new ArrayList<>();
     private static ArrayList<Integer> turnsToMine = new ArrayList<>();
@@ -20,7 +19,7 @@ class Player {
     private static Ship enemyTarget = null;
     private static Barrel barrelTarget = null;
     private static Mine mineTarget = null;
-    private static int temperature;
+    private static int temperature = 0;
 
     private static Random random = new Random();
 
@@ -43,7 +42,6 @@ class Player {
             barrels.clear();
             mines.clear();
             cannonballs.clear();
-            enemyTargets.clear();
             //numero de barcos aliados que quedan
             int myShipCount = in.nextInt();
             //numero de entidades (ships, barrels, mines, cannonballs)
@@ -124,13 +122,11 @@ class Player {
 
                 String bestAction;
 
-                bestAction = hillClimbing(currentShip);
-                //bestAction = simulatedAnnealing(currentShip);
+                //bestAction = hillClimbing();
+                bestAction = simulatedAnnealing();
 
                 //imprimo la accion que obtuvo mayor valor segun la estrategia
                 doAction(bestAction);
-                //notifico la accion que haria hill climbing
-                //notifyAction(hillClimbing(currentShip));
 
                 //seteo la ultima accion hecha por el barco
                 lastActions.set(i, bestAction);
@@ -173,65 +169,66 @@ class Player {
                     );
                 }*/
                 //seteo el barco en la posicion en la que quedara luego de realizar la accion
-                //allyShips.set(i, currentShip.getFutureShip(bestAction));
                 allyShips.set(i, currentShip.getFutureShipWithObstacles(bestAction, mapLimits));
 
             }
         }
     }
 
-    public static String hillClimbing(Ship ship) {
+    public static String hillClimbing() {
         String bestAction = "WAIT";
-        ArrayList<Ship> futureShips = new ArrayList<>();
 
-        //obtengo todos los posibles barcos dados cada accion
-        for (int a = 0; a < ACTIONS.size(); a++) {
-            //futureShips.add(ship.getFutureShip(ACTIONS.get(a)));
-            futureShips.add(ship.getFutureShipWithObstacles(ACTIONS.get(a), mapLimits));
-        }
-
-        //segun una estrategia (funcion de evaluacion), obtengo el barco que la maximice
         int strategyMax = Integer.MIN_VALUE;
         int strategyActual = 0;
-        for (int fs = 0; fs < futureShips.size(); fs++) {
-            strategyActual = strategy(futureShips.get(fs), ACTIONS.get(fs));
+        
+        //segun una estrategia (funcion de evaluacion), obtengo la accion que la maximice
+        for (int a = 0; a < ACTIONS.size(); a++) {
+            strategyActual = strategy(ACTIONS.get(a));
             if (strategyActual > strategyMax) {
                 strategyMax = strategyActual;
-                bestAction = ACTIONS.get(fs);
+                bestAction = ACTIONS.get(a);
             }
-            if (ship.getId() == 0) {
+            //if (currentShip.getId() == 0) {
                 //System.err.println("(" + ship.getId() + ")" + ACTIONS.get(fs) + " : " + strategyActual);
-            }
+            //}
         }
 
         return bestAction;
     }
 
-    public static String simulatedAnnealing(Ship ship) {
-        //System.err.println("Temperature : " + temperature);
+    public static String simulatedAnnealing() {
+        
         String bestAction = "WAIT";
         String iteraAction;
-        Ship currentShip = ship;
-        Ship iteraShip;
-        float T;
-        int kmax = 2000;
         int deltaE;
-        for (temperature = 1; temperature < kmax; temperature += 10) {
-            T = temperature / kmax;
+        float kmax = 200;
+        float T = temperature / kmax;
+        
+        System.err.println("Temperature : " + (kmax - temperature));
+        
+        int i = 1;
+        boolean actionFound = false;
+        while (i < ACTIONS.size() && !actionFound) {
             iteraAction = ACTIONS.get(random.nextInt(7));
-            //iteraShip = currentShip.getFutureShip(iteraAction);
-            iteraShip = currentShip.getFutureShipWithObstacles(iteraAction, mapLimits);
-            // ?E = value(nextState) - value(currentState)
-            deltaE = strategy(iteraShip, iteraAction) - strategy(currentShip, bestAction);
+            //iteraAction = ACTIONS.get(i);
+            // ∆E = value(nextState) - value(currentState)
+            deltaE = strategy(iteraAction) - strategy(lastActions.get(allyShips.indexOf(currentShip)));
             if (deltaE > 0) {
-                currentShip = iteraShip;
                 bestAction = iteraAction;
+                actionFound = true;
             } else if (Math.pow(Math.E, deltaE / T) > Math.random()) {
-                currentShip = iteraShip;
                 bestAction = iteraAction;
+                actionFound = true;
             }
+            i++;
+        }
+        
+        if (temperature < kmax) {
+            temperature+=10;
         }
 
+        //notifico la accion que haria hill climbing
+        notifyAction(hillClimbing());
         return bestAction;
     }
 
@@ -252,12 +249,11 @@ class Player {
         }
     }
 
-    public static void fireAction() {
+    public static void fireAction() {        
+        //futureEnemyHex = enemyTarget.getPosition().getNeighbor(enemyTarget.getOrientation(),(1 + distanceToEnemy / 3));
+        
         int attackDirection = enemyTarget.getOrientation();
-        if (currentShip.getId() > 0 && !enemyTargets.isEmpty() && enemyTargets.contains(enemyTarget)) {
-            attackDirection = enemyTarget.getPortDirection();
-        }
-
+        
         int distanceToEnemy = currentShip.getFront().distanceTo(enemyTarget.getPosition());
 
         Hex futureEnemyHex = enemyTarget.getPosition();
@@ -266,8 +262,6 @@ class Player {
             futureEnemyHex = futureEnemyHex.getNeighbor(attackDirection);
             j++;
         }
-
-        enemyTargets.add(enemyTarget);
 
         //caso para la accion FIRE que requiere coordenadas
         System.out.println("FIRE " + futureEnemyHex.getX() + " " + futureEnemyHex.getY()
@@ -318,8 +312,11 @@ class Player {
         return mineTarget;
     }
 
-    public static int strategy(Ship neighborShip, String action) {
+    public static int strategy(String action) {
         int value = 100;
+        
+        Ship neighborShip = currentShip.getFutureShipWithObstacles(action,mapLimits);
+        
         int distanceToEnemy = neighborShip.getFront().distanceTo(enemyTarget.getPosition());
         String lastAction = lastActions.get(allyShips.indexOf(neighborShip));
 
