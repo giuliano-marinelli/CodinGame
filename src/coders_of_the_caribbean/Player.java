@@ -122,8 +122,8 @@ class Player {
 
                 String bestAction;
 
-                //bestAction = hillClimbing();
-                bestAction = simulatedAnnealing();
+                bestAction = hillClimbing();
+                //bestAction = simulatedAnnealing();
 
                 //imprimo la accion que obtuvo mayor valor segun la estrategia
                 doAction(bestAction);
@@ -188,9 +188,9 @@ class Player {
                 strategyMax = strategyActual;
                 bestAction = ACTIONS.get(a);
             }
-            //if (currentShip.getId() == 0) {
-                //System.err.println("(" + ship.getId() + ")" + ACTIONS.get(fs) + " : " + strategyActual);
-            //}
+            if (currentShip.getId() == 0) {
+                System.err.println("(" + currentShip.getId() + ")" + ACTIONS.get(a) + " : " + strategyActual);
+            }
         }
 
         return bestAction;
